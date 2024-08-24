@@ -58,7 +58,7 @@ func testReadAt(t *testing.T, s *store) {
 		require.Equal(t, lenWidth, n)
 		off += int64(n)
 
-		size := enc.Uint16(b)
+		size := enc.Uint64(b)
 		b = make([]byte, size)
 		n, err = s.ReadAt(b, off)
 		require.NoError(t, err)
@@ -77,15 +77,29 @@ func TestStoreClose(t *testing.T) {
 	_, _, err = s.Append(write)
 	require.NoError(t, err)
 
-	f, beforeSize, err := os.OpenFile(f.Name())
-	fileInfo, _ := os.Stat(f.Name())
-	fileInfo.Size()
+	f, beforeSize, err := openFile(f.Name())
 	require.NoError(t, err)
 
 	err = s.Close()
 	require.NoError(t, err)
 
-	_, afterSize, err := os.OpenFile(f.Name())
+	_, afterSize, err := openFile(f.Name())
 	require.NoError(t, err)
 	require.True(t, afterSize > beforeSize)
+}
+
+func openFile(name string) (file *os.File, size int64, err error) {
+	f, err := os.OpenFile(
+		name,
+		os.O_RDONLY|os.O_CREATE|os.O_APPEND,
+		0644,
+	)
+	if err != nil {
+		return nil, 0, err
+	}
+	fi, err := f.Stat()
+	if err != nil {
+		return nil, 0, err
+	}
+	return f, fi.Size(), nil
 }
